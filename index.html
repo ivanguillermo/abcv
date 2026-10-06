@@ -293,22 +293,31 @@
     const historyDateInput = document.getElementById('historyDateInput');
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Cargar caché local para mostrar algo de inmediato
+      // 1. Cargar caché local para mostrar algo de inmediato
       const cachedRate = localStorage.getItem('bcv_rate_d1');
       if (cachedRate) {
         currentActiveRate = parseFloat(cachedRate);
+        todayRate = currentActiveRate;
         rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
         statusBadge.textContent = "Caché Local";
       }
 
-      // Carga rápida de la tasa actual
+      // Intentar cargar histórico guardado previamente en localStorage
+      const cachedHistorico = localStorage.getItem('bcv_historico');
+      if (cachedHistorico) {
+        try {
+          historicoData = JSON.parse(cachedHistorico);
+        } catch (e) {
+          console.error("Error leyendo caché de histórico", e);
+        }
+      }
+
+      // 2. Carga rápida de la tasa actual (D1)
       obtenerTasaD1();
       
-      // Carga del histórico de forma silenciosa y asíncrona en segundo plano
+      // 3. Carga del histórico de forma silenciosa y asíncrona en segundo plano
       cargarHistoricoAsincrono();
     });
-
-   
 
     // 1. Petición ultrarrápida solo para la tasa de D1
     async function obtenerTasaD1() {
@@ -319,15 +328,18 @@
 
         if (data && data.tasa) {
           let rawValue = data.tasa.toString().replace(',', '.');
-          currentActiveRate = parseFloat(rawValue);
+          todayRate = parseFloat(rawValue);
 
-          if (!isNaN(currentActiveRate)) {
-            rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
-            dateAppliedDisplay.textContent = `Actualizado: ${data.fecha ? data.fecha.substring(0, 10) : 'Hoy'}`;
-            statusBadge.textContent = "Conectado";
-            localStorage.setItem('bcv_rate_d1', currentActiveRate);
+          if (!isNaN(todayRate)) {
+            todayDateStr = data.fecha ? data.fecha.substring(0, 10) : 'Hoy';
             
-            recalcularLive('usd');
+            // Si estamos en la pestaña de hoy, actualizamos la vista de inmediato
+            if (currentMode === "today") {
+              mostrarTasaHoy();
+            }
+
+            statusBadge.textContent = "Conectado";
+            localStorage.setItem('bcv_rate_d1', todayRate);
           } else {
             rateDisplay.textContent = "Error";
             dateAppliedDisplay.textContent = "El valor en D1 no es un número válido";
@@ -336,54 +348,38 @@
       } catch (error) {
         console.error("Error obteniendo D1:", error);
         statusBadge.textContent = "Sin conexión";
-        if (currentActiveRate > 0) {
+        if (todayRate > 0 && currentMode === "today") {
           dateAppliedDisplay.textContent = "Usando última tasa guardada";
         }
       }
     }
 
-    // 2. Petición asíncrona que no bloquea la interfaz para traer todo el histórico
+    // 2. Petición asíncrona que trae todo el histórico en segundo plano
     async function cargarHistoricoAsincrono() {
       try {
         const response = await fetch(API_URL); // Sin ?action trae todo el historial
         const data = await response.json();
         if (data && data.datos) {
-          console.log(`Histórico sincronizado: ${data.total_registros} registros cargados en segundo plano.`);
-          // Aquí puedes guardar los datos en localStorage o usarlos si implementas gráficos/tablas más adelante:
-          localStorage.setItem('bcv_historico', JSON.stringify(data.datos));
+          historicoData = data.datos;
+          localStorage.setItem('bcv_historico', JSON.stringify(historicoData));
+          console.log(`Histórico sincronizado: ${historicoData.length} registros.`);
+
+          // Si el usuario ya se había cambiado a la pestaña de histórico, refrescar la búsqueda
+          if (currentMode === "history") {
+            buscarTasaPorFecha();
+          }
         }
       } catch (error) {
         console.error("Error cargando el histórico en segundo plano:", error);
       }
     }
 
-    function procesarRespuestaServidor(data) {
-      // 1. Tasa del día
-      const valorTasa = data.tasa_d1 || data.tasa;
-      if (valorTasa !== undefined && valorTasa !== null) {
-        let rawValue = valorTasa.toString().replace(',', '.');
-        todayRate = parseFloat(rawValue);
-      }
-      
-      todayDateStr = data.actualizado ? data.actualizado.substring(0, 10) : 'Hoy';
-
-      // 2. Histórico de registros
-      historicoData = Array.isArray(data.datos) ? data.datos : [];
-
-      // 3. Renderizar según el modo seleccionado
-      if (currentMode === "today") {
-        mostrarTasaHoy();
-      } else {
-        buscarTasaPorFecha();
-      }
-    }
-
     function mostrarTasaHoy() {
       currentActiveRate = todayRate;
-      rateLabel.textContent = "Tasa Celda D1 (Hoy)";
+      rateLabel.textContent = "Tasa de Hoy";
       if (currentActiveRate > 0) {
         rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
-        dateAppliedDisplay.textContent = `Actualizado: ${todayDateStr}`;
+        dateAppliedDisplay.textContent = `Actualizado: ${todayDateStr || 'Hoy'}`;
       } else {
         rateDisplay.textContent = "--.--";
         dateAppliedDisplay.textContent = "Sin datos de la tasa de hoy";
@@ -401,11 +397,10 @@
         return;
       }
 
-      // Buscar la fecha seleccionada en el arreglo
+      // Buscar la fecha seleccionada en el arreglo del histórico
       const registroEncontrado = historicoData.find(item => {
         if (!item.fecha) return false;
-        const fechaItem = item.fecha.substring(0, 10);
-        return fechaItem === fechaSeleccionada;
+        return item.fecha.substring(0, 10) === fechaSeleccionada;
       });
 
       if (registroEncontrado) {
