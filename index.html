@@ -269,7 +269,7 @@
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbxJ2vL3IjjUOp6sNzI_SXSpaGxOoLMcKmAWQ3nVUOfM44qR_d8-7WTg7en3K7qYKun7/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbwS6hBrm4JOX6eQkTAMhlw6tEYIoJE5eIS6bsLOOexNjJ0gIGOXSWixoD-0WOlTmm8R/exec";
 
     let currentActiveRate = 0;
     let todayRate = 0;
@@ -293,38 +293,67 @@
     const historyDateInput = document.getElementById('historyDateInput');
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Intentar cargar caché local
-      const cachedData = localStorage.getItem('bcv_full_payload');
-      if (cachedData) {
-        try {
-          const parsed = JSON.parse(cachedData);
-          procesarRespuestaServidor(parsed);
-          statusBadge.textContent = "Caché Local";
-        } catch(e) {
-          console.error("Error parseando caché local", e);
-        }
+      // Cargar caché local para mostrar algo de inmediato
+      const cachedRate = localStorage.getItem('bcv_rate_d1');
+      if (cachedRate) {
+        currentActiveRate = parseFloat(cachedRate);
+        rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
+        statusBadge.textContent = "Caché Local";
       }
 
+      // Carga rápida de la tasa actual
       obtenerTasaD1();
+      
+      // Carga del histórico de forma silenciosa y asíncrona en segundo plano
+      cargarHistoricoAsincrono();
     });
 
+   
+
+    // 1. Petición ultrarrápida solo para la tasa de D1
     async function obtenerTasaD1() {
-      statusBadge.textContent = "Cargando...";
+      statusBadge.textContent = "Conectando...";
       try {
-        const response = await fetch(API_URL);
+        const response = await fetch(`${API_URL}?action=tasa`);
         const data = await response.json();
 
-        if (data) {
-          localStorage.setItem('bcv_full_payload', JSON.stringify(data));
-          procesarRespuestaServidor(data);
-          statusBadge.textContent = "Conectado";
+        if (data && data.tasa) {
+          let rawValue = data.tasa.toString().replace(',', '.');
+          currentActiveRate = parseFloat(rawValue);
+
+          if (!isNaN(currentActiveRate)) {
+            rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
+            dateAppliedDisplay.textContent = `Actualizado: ${data.fecha ? data.fecha.substring(0, 10) : 'Hoy'}`;
+            statusBadge.textContent = "Conectado";
+            localStorage.setItem('bcv_rate_d1', currentActiveRate);
+            
+            recalcularLive('usd');
+          } else {
+            rateDisplay.textContent = "Error";
+            dateAppliedDisplay.textContent = "El valor en D1 no es un número válido";
+          }
         }
       } catch (error) {
-        console.error("Error obteniendo datos:", error);
+        console.error("Error obteniendo D1:", error);
         statusBadge.textContent = "Sin conexión";
         if (currentActiveRate > 0) {
-          dateAppliedDisplay.textContent = "Usando datos guardados";
+          dateAppliedDisplay.textContent = "Usando última tasa guardada";
         }
+      }
+    }
+
+    // 2. Petición asíncrona que no bloquea la interfaz para traer todo el histórico
+    async function cargarHistoricoAsincrono() {
+      try {
+        const response = await fetch(API_URL); // Sin ?action trae todo el historial
+        const data = await response.json();
+        if (data && data.datos) {
+          console.log(`Histórico sincronizado: ${data.total_registros} registros cargados en segundo plano.`);
+          // Aquí puedes guardar los datos en localStorage o usarlos si implementas gráficos/tablas más adelante:
+          localStorage.setItem('bcv_historico', JSON.stringify(data.datos));
+        }
+      } catch (error) {
+        console.error("Error cargando el histórico en segundo plano:", error);
       }
     }
 
