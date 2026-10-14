@@ -387,7 +387,7 @@
     const historyDateGroup = document.getElementById('historyDateGroup');
     const historyDateInput = document.getElementById('historyDateInput');
 
-    const audioSilencioso = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+    let audioSilencioso = null;
     audioSilencioso.loop = true;
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -605,7 +605,7 @@
       return audio;
     }
 
-    let audioSilencioso = null;
+    
 
     function actualizarMediaSessionInteligente() {
       if (currentActiveRate <= 0) return;
