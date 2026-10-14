@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Mi Tasa BCV</title>
+  <title>A-BCV</title>
 
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
@@ -253,7 +253,7 @@
 
   <div class="app-container">
     <header>
-      <h1>Calculadora Dólar BCV</h1>
+      <h1>Calcula TASA BCV</h1>
       <span id="statusBadge" class="badge">Conectando...</span>
     </header>
 
@@ -297,12 +297,12 @@
       </div>
 
       <div class="action-row">
-        <button type="button" id="btnRefresh" class="refresh-btn">🔄 Actualizar</button>
-        <button type="button" id="btnCopy" class="copy-btn">📋 Copiar Bs.</button>
+        <button type="button" id="btnRefresh" class="refresh-btn">🔄</button>
+        <button type="button" id="btnCopy" class="copy-btn">📋</button>
       </div>
 
       <!-- Botón para activar el Modo Notificación Inteligente -->
-      <button type="button" id="btnNotif" class="tool-btn">🎵 Activar Notificación Inteligente</button>
+      <button type="button" id="btnNotif" class="tool-btn">Activar Notificación Inteligente</button>
     </main>
 
     <div class="status" id="footerStatus">Conectado a Google Sheets</div>
@@ -410,7 +410,7 @@
     }
 
     function mostrarTasaHoy() {
-      rateLabel.textContent = "Tasa Celda D1 (Hoy)";
+      rateLabel.textContent = "Tasa(Hoy)";
       const cachedTime = localStorage.getItem('bcv_time_d1');
       if (currentActiveRate > 0) {
         rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
@@ -541,7 +541,7 @@
       else if (cicloModo === 1) {
         // Modo 2: Bolívares Pequeños
         imagenLogo = "bs_dol_peq.png";
-        maxDuration = 5000;
+        maxDuration = 20000;
         const totalUSD = (montoValor / currentActiveRate).toFixed(2);
         title = `🇻🇪 ${montoValor.toFixed(2)} Bs. (Peq)`;
         artist = `Equivale a: $${totalUSD} USD`;
@@ -550,7 +550,7 @@
       else if (cicloModo === 2) {
         // Modo 3: Bolívares Grandes
         imagenLogo = "bs_dol_g.png";
-        maxDuration = 50000;
+        maxDuration = 200000;
         const totalUSD = (montoValor / currentActiveRate).toFixed(2);
         title = `🇻🇪 ${montoValor.toLocaleString()} Bs. (Grandes)`;
         artist = `Equivale a: $${totalUSD} USD`;
@@ -572,10 +572,10 @@
           artist: artist,
           album: album,
           artwork: [
-            { src: imagenLogo, sizes: '96x96', type: 'image/png' },
-            { src: imagenLogo, sizes: '128x128', type: 'image/png' },
-            { src: imagenLogo, sizes: '192x192', type: 'image/png' },
-            { src: imagenLogo, sizes: '512x512', type: 'image/png' }
+            { src: imagenLogo, sizes: '64x64', type: 'image/png' },
+            { src: imagenLogo, sizes: '64x64', type: 'image/png' },
+            { src: imagenLogo, sizes: '64x64', type: 'image/png' },
+            { src: imagenLogo, sizes: '64x64', type: 'image/png' }
           ]
         });
 
@@ -605,8 +605,8 @@
         // Botón Siguiente: Aumenta según el modo activo
         navigator.mediaSession.setActionHandler('nexttrack', () => {
           if (cicloModo === 0) montoValor += 1.0;       // +1 USD
-          else if (cicloModo === 1) montoValor += 100;  // +100 Bs
-          else if (cicloModo === 2) montoValor += 1000; // +1000 Bs
+          else if (cicloModo === 1) montoValor += 1000;  // +100 Bs
+          else if (cicloModo === 2) montoValor += 5000; // +1000 Bs
           else if (cicloModo === 3) montoValor += 1.0;  // +1 EUR
           actualizarMediaSessionInteligente();
         });
@@ -614,8 +614,8 @@
         // Botón Anterior: Disminuye según el modo activo
         navigator.mediaSession.setActionHandler('previoustrack', () => {
           if (cicloModo === 0) montoValor = Math.max(0, montoValor - 0.5);
-          else if (cicloModo === 1) montoValor = Math.max(0, montoValor - 50);
-          else if (cicloModo === 2) montoValor = Math.max(0, montoValor - 500);
+          else if (cicloModo === 1) montoValor = Math.max(0, montoValor - 500);
+          else if (cicloModo === 2) montoValor = Math.max(0, montoValor - 1000);
           else if (cicloModo === 3) montoValor = Math.max(0, montoValor - 0.5);
           actualizarMediaSessionInteligente();
         });
@@ -624,8 +624,8 @@
         const rotarCiclo = () => {
           cicloModo = (cicloModo + 1) % 4;
           if (cicloModo === 0) montoValor = 10.00;      // Default USD
-          else if (cicloModo === 1) montoValor = 500.00;  // Default Bs Peq
-          else if (cicloModo === 2) montoValor = 5000.00; // Default Bs Gde
+          else if (cicloModo === 1) montoValor = 1000.00;  // Default Bs Peq
+          else if (cicloModo === 2) montoValor = 10000.00; // Default Bs Gde
           else if (cicloModo === 3) montoValor = 10.00;   // Default EUR
           actualizarMediaSessionInteligente();
         };
