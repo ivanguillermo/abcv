@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090d16">
+  <meta name="description" content="Calculadora de Divisas USD a VES con modo reproductor en segundo plano y ventana flotante para Pago Móvil.">
+  <title>Calculadora USD/VES - Modo Notificación & PiP</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              900: '#064e3b',
+            },
+            darkbg: '#0b0f19',
+            cardbg: '#151c2c',
+            borderbg: '#232d42'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Dynamic Web App Manifest Injection -->
+  <script>
+    const manifest = {
+      name: "Calculadora USD a VES",
+      short_name: "USD/VES",
+      start_url: "./",
+      display: "standalone",
+      background_color: "#0b0f19",
+      theme_color: "#10b981",
+      icons: [
+        {
+          src: "https://placehold.co/192x192/10b981/ffffff.png?text=$%2FBs",
+          sizes: "192x192",
+          type: "image/png"
+        },
+        {
+          src: "https://placehold.co/512x512/10b981/ffffff.png?text=$%2FBs",
+          sizes: "512x512",
+          type: "image/png"
+        }
+      ]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const manifestURL = URL.createObjectURL(manifestBlob);
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = manifestURL;
+    document.head.appendChild(link);
+  </script>
+
+  <style>
+    /* Custom UI Scrollbar & Slider Styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #232d42;
+      border-radius: 8px;
+      height: 10px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 24px;
+      width: 24px;
+      border-radius: 50%;
+      background: #10b981;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+    }
+    input[type=range]::-moz-range-thumb {
+      height: 24px;
+      width: 24px;
+      border-radius: 50%;
+      background: #10b981;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+    }
+    .glass-card {
+      background: rgba(21, 28, 44, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-darkbg text-slate-100 min-h-screen font-sans antialiased flex flex-col justify-between p-4 sm:p-6 select-none">
+
+  <!-- Header -->
+  <header class="max-w-md mx-auto w-full flex items-center justify-between mb-4">
+    <div class="flex items-center gap-2">
+      <div class="p-2 bg-brand-500/20 text-brand-500 rounded-xl border border-brand-500/30">
+        <i data-lucide="calculator" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight">Calculadora USD / VES</h1>
+        <p class="text-xs text-slate-400">Asistente para Pago Móvil</p>
+      </div>
+    </div>
+    <button id="btnCopyBs" title="Copiar Bolívares" class="p-2.5 bg-cardbg hover:bg-borderbg border border-borderbg rounded-xl text-slate-300 transition active:scale-95 flex items-center gap-1.5 text-xs font-semibold">
+      <i data-lucide="copy" class="w-4 h-4 text-brand-500"></i> Copiar Bs
+    </button>
+  </header>
+
+  <!-- Main Content Card -->
+  <main class="max-w-md mx-auto w-full flex-1 flex flex-col gap-4">
+    
+    <!-- Tasa BCV / Personalizada Card -->
+    <section class="glass-card rounded-2xl p-4 shadow-xl">
+      <div class="flex items-center justify-between mb-2">
+        <label for="inputRate" class="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+          <i data-lucide="trending-up" class="w-4 h-4 text-brand-500"></i> Tasa de Cambio (VES/USD)
+        </label>
+        <span class="text-[10px] bg-brand-500/10 text-brand-500 font-medium px-2 py-0.5 rounded-full border border-brand-500/20">Modificable</span>
+      </div>
+      <div class="relative">
+        <input type="number" id="inputRate" step="0.01" value="36.50" class="w-full bg-darkbg border border-borderbg rounded-xl py-2.5 px-3 text-xl font-bold text-slate-100 focus:outline-none focus:border-brand-500 transition pl-10" />
+        <span class="absolute left-3 top-3 text-slate-500 font-bold text-sm">Bs.</span>
+      </div>
+    </section>
+
+    <!-- Visual Display Card -->
+    <section class="glass-card rounded-2xl p-5 shadow-2xl relative overflow-hidden flex flex-col justify-center items-center text-center border-brand-500/30">
+      <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      
+      <span class="text-xs uppercase font-bold tracking-widest text-slate-400 mb-1">Monto Convertido</span>
+      
+      <!-- Display Bolivares -->
+      <div class="my-1">
+        <div class="text-3xl sm:text-4xl font-black text-brand-500 tracking-tight flex items-baseline justify-center gap-1">
+          <span id="displayVES">365.00</span>
+          <span class="text-base font-semibold text-brand-500/80">VES</span>
+        </div>
+      </div>
+
+      <!-- Display USD -->
+      <div class="text-slate-400 text-sm font-medium mt-1 flex items-center gap-1">
+        <span>Equivale a:</span>
+        <strong id="displayUSD" class="text-slate-200 font-bold text-base">10.00</strong>
+        <span>USD</span>
+      </div>
+    </section>
+
+    <!-- Interactive Controls Card -->
+    <section class="glass-card rounded-2xl p-4 shadow-xl flex flex-col gap-4">
+      
+      <!-- Slider Control -->
+      <div>
+        <div class="flex justify-between items-center text-xs text-slate-400 mb-2 font-medium">
+          <span>Barra Deslizante (0 - 100 $)</span>
+          <span id="sliderValueText" class="text-brand-500 font-bold">10.00 $</span>
+        </div>
+        <input type="range" id="usdSlider" min="0" max="100" step="0.5" value="10" class="w-full cursor-pointer">
+      </div>
+
+      <!-- Quick Preset Buttons -->
+      <div>
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2">Montos Rápidos</span>
+        <div class="grid grid-cols-5 gap-2">
+          <button class="btn-preset bg-darkbg hover:bg-borderbg border border-borderbg py-2 rounded-xl text-xs font-bold transition text-slate-200" data-amount="1">$1</button>
+          <button class="btn-preset bg-darkbg hover:bg-borderbg border border-borderbg py-2 rounded-xl text-xs font-bold transition text-slate-200" data-amount="5">$5</button>
+          <button class="btn-preset bg-darkbg hover:bg-borderbg border border-borderbg py-2 rounded-xl text-xs font-bold transition text-slate-200" data-amount="10">$10</button>
+          <button class="btn-preset bg-darkbg hover:bg-borderbg border border-borderbg py-2 rounded-xl text-xs font-bold transition text-slate-200" data-amount="20">$20</button>
+          <button class="btn-preset bg-darkbg hover:bg-borderbg border border-borderbg py-2 rounded-xl text-xs font-bold transition text-slate-200" data-amount="50">$50</button>
+        </div>
+      </div>
+
+      <!-- Step Modifiers -->
+      <div class="grid grid-cols-5 gap-1.5">
+        <button id="btnPlus05" class="bg-cardbg hover:bg-borderbg border border-borderbg py-2 rounded-xl text-xs font-bold text-slate-200 active:scale-95 transition">+0.5</button>
+        <button id="btnPlus1" class="bg-cardbg hover:bg-borderbg border border-borderbg py-2 rounded-xl text-xs font-bold text-slate-200 active:scale-95 transition">+1</button>
+        <button id="btnPlus5" class="bg-cardbg hover:bg-borderbg border border-borderbg py-2 rounded-xl text-xs font-bold text-slate-200 active:scale-95 transition">+5</button>
+        <button id="btnPlus10" class="bg-cardbg hover:bg-borderbg border border-borderbg py-2 rounded-xl text-xs font-bold text-slate-200 active:scale-95 transition">+10</button>
+        <button id="btnReset" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 py-2 rounded-xl text-xs font-bold active:scale-95 transition">Reset</button>
+      </div>
+
+    </section>
+
+    <!-- Hack Triggers: Notification & PiP Modes -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      
+      <!-- Option 1: Media Session Notification Hack -->
+      <button id="btnToggleMediaSession" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm active:scale-95">
+        <i data-lucide="bell-ring" class="w-5 h-5"></i>
+        <span id="txtMediaSession">Activar Notificación</span>
+      </button>
+
+      <!-- Option 2: Document Picture-in-Picture Floating Window -->
+      <button id="btnTogglePiP" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-3 px-4 rounded-xl border border-borderbg shadow-lg transition flex items-center justify-center gap-2 text-sm active:scale-95">
+        <i data-lucide="picture-in-picture-2" class="w-5 h-5 text-brand-500"></i>
+        <span>Ventana Flotante (PiP)</span>
+      </button>
+
+    </section>
+
+  </main>
+
+  <!-- Notification Banner / Instructions -->
+  <footer class="max-w-md mx-auto w-full mt-4 text-center">
+    <p class="text-[11px] text-slate-500 leading-relaxed">
+      💡 <strong>Modo Notificación:</strong> Transforma la cortina de notificaciones en un control multimedia para ajustar dólares desde cualquier app bancaria sin salirte.
+    </p>
+  </footer>
+
+  <!-- Custom Toast Notification -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-brand-500 text-slate-100 text-xs font-semibold px-4 py-2.5 rounded-full shadow-2xl opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2 z-50">
+    <i data-lucide="check-circle" class="w-4 h-4 text-brand-500"></i>
+    <span id="toastMsg">Monto copiado al portapapeles</span>
+  </div>
+
+  <script>
+    // State management
+    let currentUSD = 10.0;
+    let currentRate = 36.50;
+    let isMediaActive = false;
+    let audioContext = null;
+    let silentOscillator = null;
+
+    // DOM Elements
+    const inputRate = document.getElementById('inputRate');
+    const displayVES = document.getElementById('displayVES');
+    const displayUSD = document.getElementById('displayUSD');
+    const usdSlider = document.getElementById('usdSlider');
+    const sliderValueText = document.getElementById('sliderValueText');
+    const btnCopyBs = document.getElementById('btnCopyBs');
+    const btnToggleMediaSession = document.getElementById('btnToggleMediaSession');
+    const txtMediaSession = document.getElementById('txtMediaSession');
+    const btnTogglePiP = document.getElementById('btnTogglePiP');
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toastMsg');
+
+    // Initialize Icons
+    lucide.createIcons();
+
+    // 1. Calculation & UI Update Functions
+    function calculateVES() {
+      return (currentUSD * currentRate).toFixed(2);
+    }
+
+    function updateUI() {
+      const totalVES = calculateVES();
+      displayVES.textContent = totalVES;
+      displayUSD.textContent = currentUSD.toFixed(2);
+      sliderValueText.textContent = `${currentUSD.toFixed(2)} $`;
+      usdSlider.value = currentUSD;
+
+      if (isMediaActive) {
+        updateMediaSessionState();
+      }
+    }
+
+    function setUSD(val) {
+      currentUSD = Math.max(0, parseFloat(val));
+      updateUI();
+    }
+
+    function addUSD(val) {
+      setUSD(currentUSD + val);
+    }
+
+    // 2. Event Listeners for UI
+    inputRate.addEventListener('input', (e) => {
+      currentRate = parseFloat(e.target.value) || 0;
+      updateUI();
+    });
+
+    usdSlider.addEventListener('input', (e) => {
+      setUSD(e.target.value);
+    });
+
+    document.querySelectorAll('.btn-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setUSD(btn.dataset.amount);
+      });
+    });
+
+    document.getElementById('btnPlus05').addEventListener('click', () => addUSD(0.5));
+    document.getElementById('btnPlus1').addEventListener('click', () => addUSD(1.0));
+    document.getElementById('btnPlus5').addEventListener('click', () => addUSD(5.0));
+    document.getElementById('btnPlus10').addEventListener('click', () => addUSD(10.0));
+    document.getElementById('btnReset').addEventListener('click', () => setUSD(0));
+
+    // Toast functionality
+    function showToast(msg) {
+      toastMsg.textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2000);
+    }
+
+    btnCopyBs.addEventListener('click', () => {
+      const ves = calculateVES();
+      // Using execCommand fallback for strict iframe environments
+      const tempInput = document.createElement('input');
+      tempInput.value = ves;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+      showToast(`Bs. ${ves} copiado al portapapeles`);
+    });
+
+    // 3. Web Audio API Silent Loop (No external MP3 files needed)
+    function startSilentAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      
+      // Create silent oscillator & gain node
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      gain.gain.value = 0.001; // Nearly zero volume to comply with playback policies
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.start();
+      silentOscillator = osc;
+    }
+
+    function stopSilentAudio() {
+      if (silentOscillator) {
+        silentOscillator.stop();
+        silentOscillator.disconnect();
+        silentOscillator = null;
+      }
+    }
+
+    // 4. Media Session API Notification Hack
+    function updateMediaSessionState() {
+      if (!('mediaSession' in navigator)) return;
+
+      const vesTotal = calculateVES();
+
+      // Display conversion status in track metadata
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: `${currentUSD.toFixed(2)} USD  ➜  ${vesTotal} VES`,
+        artist: `Tasa: ${currentRate.toFixed(2)} Bs/$`,
+        album: 'Calculadora Pago Móvil',
+        artwork: [
+          { src: 'https://placehold.co/96x96/10b981/ffffff.png?text=$', sizes: '96x96', type: 'image/png' },
+          { src: 'https://placehold.co/512x512/10b981/ffffff.png?text=$', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+
+      // Map range to MediaSession position state (0 - 100 USD)
+      if ('setPositionState' in navigator.mediaSession) {
+        try {
+          navigator.mediaSession.setPositionState({
+            duration: 100,
+            playbackRate: 1,
+            position: Math.min(100, Math.max(0, currentUSD))
+          });
+        } catch (err) {
+          console.warn("SetPositionState error:", err);
+        }
+      }
+    }
+
+    function enableMediaSessionHandlers() {
+      if (!('mediaSession' in navigator)) return;
+
+      // Next Track Button -> Add 1 USD
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        addUSD(1.0);
+      });
+
+      // Previous Track Button -> Subtract 1 USD
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        addUSD(-1.0);
+      });
+
+      // Seekbar Dragging in Notification -> Sets exact USD amount
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined) {
+          setUSD(details.seekTime);
+        }
+      });
+
+      // Play / Pause fallback handlers
+      navigator.mediaSession.setActionHandler('play', () => {
+        startSilentAudio();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        stopSilentAudio();
+      });
+    }
+
+    btnToggleMediaSession.addEventListener('click', () => {
+      if (!('mediaSession' in navigator)) {
+        alert('Tu navegador no soporta MediaSession API.');
+        return;
+      }
+
+      if (!isMediaActive) {
+        startSilentAudio();
+        enableMediaSessionHandlers();
+        isMediaActive = true;
+        updateMediaSessionState();
+        txtMediaSession.textContent = "Desactivar Notificación";
+        btnToggleMediaSession.classList.remove('bg-brand-600', 'hover:bg-brand-500');
+        btnToggleMediaSession.classList.add('bg-amber-600', 'hover:bg-amber-500');
+        showToast("¡Modo Notificación Activo! Despliega la cortina del móvil");
+      } else {
+        stopSilentAudio();
+        isMediaActive = false;
+        txtMediaSession.textContent = "Activar Notificación";
+        btnToggleMediaSession.classList.remove('bg-amber-600', 'hover:bg-amber-500');
+        btnToggleMediaSession.classList.add('bg-brand-600', 'hover:bg-brand-500');
+        showToast("Modo Notificación Desactivado");
+      }
+    });
+
+    // 5. Document Picture-in-Picture (PiP) Floating Window
+    btnTogglePiP.addEventListener('click', async () => {
+      if (!('documentPictureInPicture' in window)) {
+        alert('La API Document Picture-in-Picture es soportada actualmente en Chrome y Edge para PC / Android compatible.');
+        return;
+      }
+
+      try {
+        const pipWindow = await documentPictureInPicture.requestWindow({
+          width: 300,
+          height: 320,
+        });
+
+        // Inject Tailwind and styles into the floating window
+        const style = document.createElement('style');
+        style.textContent = `
+          body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #0b0f19;
+            color: #ffffff;
+            margin: 0;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            user-select: none;
+          }
+          .box {
+            background: #151c2c;
+            border: 1px solid #232d42;
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+          }
+          .label { text-transform: uppercase; font-size: 10px; color: #94a3b8; font-weight: bold; }
+          .ves { font-size: 24px; font-weight: 900; color: #10b981; margin: 2px 0; }
+          .usd { font-size: 13px; color: #cbd5e1; }
+          input[type=range] { width: 100%; accent-color: #10b981; cursor: pointer; }
+          .grid-btns { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+          .btn-pip {
+            background: #1e293b;
+            color: #fff;
+            border: 1px solid #334155;
+            padding: 8px 0;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+          }
+          .btn-pip:active { background: #334155; }
+          .btn-reset { background: rgba(244, 63, 94, 0.2); color: #fb7185; border-color: rgba(244, 63, 94, 0.3); }
+        `;
+        pipWindow.document.head.appendChild(style);
+
+        // Inject UI HTML into PiP
+        pipWindow.document.body.innerHTML = `
+          <div class="box">
+            <div class="label">PAGO MÓVIL (VES)</div>
+            <div class="ves" id="pipVes">${calculateVES()}</div>
+            <div class="usd">Dólares: <strong id="pipUsd">${currentUSD.toFixed(2)}</strong> $</div>
+          </div>
+
+          <input type="range" id="pipRange" min="0" max="100" step="0.5" value="${currentUSD}">
+
+          <div class="grid-btns">
+            <button class="btn-pip" id="pipAdd05">+0.5</button>
+            <button class="btn-pip" id="pipAdd1">+1</button>
+            <button class="btn-pip" id="pipAdd5">+5</button>
+            <button class="btn-pip" id="pipAdd10">+10</button>
+            <button class="btn-pip btn-reset" id="pipReset">C</button>
+          </div>
+        `;
+
+        // Bind events inside the PiP window
+        const pipVes = pipWindow.document.getElementById('pipVes');
+        const pipUsd = pipWindow.document.getElementById('pipUsd');
+        const pipRange = pipWindow.document.getElementById('pipRange');
+
+        function syncPipUI() {
+          pipVes.textContent = calculateVES();
+          pipUsd.textContent = currentUSD.toFixed(2);
+          pipRange.value = currentUSD;
+          updateUI();
+        }
+
+        pipRange.addEventListener('input', (e) => {
+          currentUSD = parseFloat(e.target.value);
+          syncPipUI();
+        });
+
+        pipWindow.document.getElementById('pipAdd05').addEventListener('click', () => { addUSD(0.5); syncPipUI(); });
+        pipWindow.document.getElementById('pipAdd1').addEventListener('click', () => { addUSD(1.0); syncPipUI(); });
+        pipWindow.document.getElementById('pipAdd5').addEventListener('click', () => { addUSD(5.0); syncPipUI(); });
+        pipWindow.document.getElementById('pipAdd10').addEventListener('click', () => { addUSD(10.0); syncPipUI(); });
+        pipWindow.document.getElementById('pipReset').addEventListener('click', () => { setUSD(0); syncPipUI(); });
+
+      } catch (err) {
+        console.error("Error abriendo Document PiP:", err);
+      }
+    });
+
+    // 6. Inline Service Worker Registration for PWA Offline Capability
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        const swCode = `
+          const CACHE_NAME = 'usd-ves-pwa-v1';
+          self.addEventListener('install', (e) => {
+            e.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(['./'])));
+          });
+          self.addEventListener('fetch', (e) => {
+            e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
+          });
+        `;
+        const blob = new Blob([swCode], { type: 'application/javascript' });
+        const swUrl = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(swUrl).catch(err => console.warn('SW register fail:', err));
+      });
+    }
+
+    // Initialize UI on load
+    updateUI();
+  </script>
+</body>
+</html>
