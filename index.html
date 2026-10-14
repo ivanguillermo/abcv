@@ -571,8 +571,8 @@
       }
     });
 
-    // ==========================================
-    // 2. TRUCO DE NOTIFICACIÓN MULTIMEDIA (Media Session)
+   // ==========================================
+    // TRUCO DE NOTIFICACIÓN MULTIMEDIA (Media Session)
     // ==========================================
     let notifMontoUSD = 10.00;
 
@@ -584,14 +584,20 @@
         navigator.mediaSession.metadata = new MediaMetadata({
           title: `${notifMontoUSD.toFixed(2)} USD`,
           artist: `Equivale a: ${totalBs} Bs.`,
-          album: 'Calculadora Pago Móvil'
+          album: 'Calculadora Pago Móvil',
+          artwork: [
+            { src: 'mitasa.png', sizes: '96x96', type: 'image/png' },
+            { src: 'mitasa.png', sizes: '128x128', type: 'image/png' },
+            { src: 'mitasa.png', sizes: '192x192', type: 'image/png' },
+            { src: 'mitasa.png', sizes: '512x512', type: 'image/png' }
+          ]
         });
 
         if ('setPositionState' in navigator.mediaSession) {
           try {
             navigator.mediaSession.setPositionState({
-              duration: 100,
-              playbackRate: 1,
+              duration: 100,      // Tope máximo del slider (100 dólares)
+              playbackRate: 0,    // ¡ESTO CONGELA LA BARRA para que no avance sola!
               position: Math.min(notifMontoUSD, 100)
             });
           } catch (e) {
@@ -610,16 +616,19 @@
       try {
         await audioSilencioso.play();
 
+        // Botón Siguiente (+1$)
         navigator.mediaSession.setActionHandler('nexttrack', () => {
           if (notifMontoUSD < 100) notifMontoUSD += 1;
           actualizarMediaSession();
         });
 
+        // Botón Anterior (-1$)
         navigator.mediaSession.setActionHandler('previoustrack', () => {
           if (notifMontoUSD > 0) notifMontoUSD -= 1;
           actualizarMediaSession();
         });
 
+        // Al deslizar la barra estática de la notificación
         navigator.mediaSession.setActionHandler('seekto', (details) => {
           if (details.seekTime !== undefined) {
             notifMontoUSD = details.seekTime;
@@ -631,7 +640,7 @@
         navigator.mediaSession.setActionHandler('pause', () => {});
 
         actualizarMediaSession();
-        alert('¡Modo notificación activado! Baja la barra de notificaciones de tu teléfono para ver la conversión y usar los botones de salto.');
+        alert('¡Modo notificación activado con tu logo y barra estática! Baja la barra de notificaciones para probarlo.');
       } catch (err) {
         console.error("Error al reproducir audio silencioso:", err);
         alert('No se pudo iniciar el modo notificación. Asegúrate de otorgar permisos de reproducción.');
