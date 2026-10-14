@@ -197,9 +197,28 @@
       font-size: 0.9rem;
       cursor: pointer;
       transition: opacity 0.2s;
+      margin-bottom: 10px;
     }
 
-    .refresh-btn:active {
+    .floating-tools {
+      display: flex;
+      gap: 8px;
+    }
+
+    .tool-btn {
+      flex: 1;
+      background-color: #334155;
+      color: #f8fafc;
+      border: none;
+      padding: 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .tool-btn:active {
       opacity: 0.8;
     }
 
@@ -263,6 +282,12 @@
       </div>
 
       <button type="button" id="btnRefresh" class="refresh-btn">🔄 Actualizar Tasa</button>
+      
+      <!-- Botones para activar los modos flotantes / notificaciones -->
+      <div class="floating-tools">
+        <button type="button" id="btnPip" class="tool-btn">🪟 Ventana Flotante</button>
+        <button type="button" id="btnNotif" class="tool-btn">🎵 Modo Notificación</button>
+      </div>
     </main>
 
     <div class="status" id="footerStatus">Conectado a Google Sheets</div>
@@ -286,40 +311,30 @@
     const dateAppliedDisplay = document.getElementById('dateAppliedDisplay');
     const statusBadge = document.getElementById('statusBadge');
     const btnRefresh = document.getElementById('btnRefresh');
+    const btnPip = document.getElementById('btnPip');
+    const btnNotif = document.getElementById('btnNotif');
 
     const tabHoyBtn = document.getElementById('tabHoyBtn');
     const tabHistorialBtn = document.getElementById('tabHistorialBtn');
     const historyDateGroup = document.getElementById('historyDateGroup');
     const historyDateInput = document.getElementById('historyDateInput');
 
+    // Audio silencioso para mantener activa la notificación multimedia
+    const audioSilencioso = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+    audioSilencioso.loop = true;
+
     document.addEventListener('DOMContentLoaded', () => {
-      // 1. Cargar caché local para mostrar algo de inmediato
       const cachedRate = localStorage.getItem('bcv_rate_d1');
       if (cachedRate) {
         currentActiveRate = parseFloat(cachedRate);
-        todayRate = currentActiveRate;
         rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
         statusBadge.textContent = "Caché Local";
       }
 
-      // Intentar cargar histórico guardado previamente en localStorage
-      const cachedHistorico = localStorage.getItem('bcv_historico');
-      if (cachedHistorico) {
-        try {
-          historicoData = JSON.parse(cachedHistorico);
-        } catch (e) {
-          console.error("Error leyendo caché de histórico", e);
-        }
-      }
-
-      // 2. Carga rápida de la tasa actual (D1)
       obtenerTasaD1();
-      
-      // 3. Carga del histórico de forma silenciosa y asíncrona en segundo plano
       cargarHistoricoAsincrono();
     });
 
-    // 1. Petición ultrarrápida solo para la tasa de D1
     async function obtenerTasaD1() {
       statusBadge.textContent = "Conectando...";
       try {
@@ -328,18 +343,15 @@
 
         if (data && data.tasa) {
           let rawValue = data.tasa.toString().replace(',', '.');
-          todayRate = parseFloat(rawValue);
+          currentActiveRate = parseFloat(rawValue);
 
-          if (!isNaN(todayRate)) {
-            todayDateStr = data.fecha ? data.fecha.substring(0, 10) : 'Hoy';
-            
-            // Si estamos en la pestaña de hoy, actualizamos la vista de inmediato
-            if (currentMode === "today") {
-              mostrarTasaHoy();
-            }
-
+          if (!isNaN(currentActiveRate)) {
+            rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
+            dateAppliedDisplay.textContent = `Actualizado: ${data.fecha ? data.fecha.substring(0, 10) : 'Hoy'}`;
             statusBadge.textContent = "Conectado";
-            localStorage.setItem('bcv_rate_d1', todayRate);
+            localStorage.setItem('bcv_rate_d1', currentActiveRate);
+            
+            recalcularLive('usd');
           } else {
             rateDisplay.textContent = "Error";
             dateAppliedDisplay.textContent = "El valor en D1 no es un número válido";
@@ -348,57 +360,39 @@
       } catch (error) {
         console.error("Error obteniendo D1:", error);
         statusBadge.textContent = "Sin conexión";
-        if (todayRate > 0 && currentMode === "today") {
+        if (currentActiveRate > 0) {
           dateAppliedDisplay.textContent = "Usando última tasa guardada";
         }
       }
     }
 
-    // 2. Petición asíncrona que trae todo el histórico en segundo plano
     async function cargarHistoricoAsincrono() {
       try {
-        const response = await fetch(API_URL); // Sin ?action trae todo el historial
+        const response = await fetch(API_URL);
         const data = await response.json();
         if (data && data.datos) {
-          historicoData = data.datos;
-          localStorage.setItem('bcv_historico', JSON.stringify(historicoData));
-          console.log(`Histórico sincronizado: ${historicoData.length} registros.`);
-
-          // Si el usuario ya se había cambiado a la pestaña de histórico, refrescar la búsqueda
-          if (currentMode === "history") {
-            buscarTasaPorFecha();
-          }
+          localStorage.setItem('bcv_historico', JSON.stringify(data.datos));
         }
       } catch (error) {
-        console.error("Error cargando el histórico en segundo plano:", error);
+        console.error("Error cargando el histórico:", error);
       }
     }
 
     function mostrarTasaHoy() {
-      currentActiveRate = todayRate;
-      rateLabel.textContent = "Tasa de Hoy";
+      currentActiveRate = todayRate > 0 ? todayRate : currentActiveRate;
+      rateLabel.textContent = "Tasa Celda D1 (Hoy)";
       if (currentActiveRate > 0) {
         rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
-        dateAppliedDisplay.textContent = `Actualizado: ${todayDateStr || 'Hoy'}`;
-      } else {
-        rateDisplay.textContent = "--.--";
-        dateAppliedDisplay.textContent = "Sin datos de la tasa de hoy";
       }
       recalcularLive('usd');
     }
 
     function buscarTasaPorFecha() {
       const fechaSeleccionada = historyDateInput.value;
-      if (!fechaSeleccionada) {
-        rateDisplay.textContent = "--.--";
-        dateAppliedDisplay.textContent = "Selecciona una fecha válida";
-        currentActiveRate = 0;
-        recalcularLive('usd');
-        return;
-      }
+      if (!fechaSeleccionada) return;
 
-      // Buscar la fecha seleccionada en el arreglo del histórico
-      const registroEncontrado = historicoData.find(item => {
+      const historicoGuardado = JSON.parse(localStorage.getItem('bcv_historico') || '[]');
+      const registroEncontrado = historicoGuardado.find(item => {
         if (!item.fecha) return false;
         return item.fecha.substring(0, 10) === fechaSeleccionada;
       });
@@ -418,7 +412,6 @@
       recalcularLive('usd');
     }
 
-    // Navegación de Pestañas
     tabHoyBtn.addEventListener('click', () => {
       currentMode = "today";
       tabHoyBtn.classList.add('active');
@@ -433,7 +426,6 @@
       tabHoyBtn.classList.remove('active');
       historyDateGroup.style.display = "flex";
 
-      // Si el input no tiene fecha seleccionada, poner la de hoy por defecto
       if (!historyDateInput.value) {
         const now = new Date();
         const year = now.getFullYear();
@@ -441,7 +433,6 @@
         const day = String(now.getDate()).padStart(2, '0');
         historyDateInput.value = `${year}-${month}-${day}`;
       }
-
       buscarTasaPorFecha();
     });
 
@@ -486,6 +477,166 @@
     usdInput.addEventListener('input', () => recalcularLive('usd'));
     vesInput.addEventListener('input', () => recalcularLive('ves'));
     btnRefresh.addEventListener('click', obtenerTasaD1);
+
+    // ==========================================
+    // 1. VENTANA FLOTANTE (Document PiP API)
+    // ==========================================
+    btnPip.addEventListener('click', async () => {
+      if ('documentPictureInPicture' in window) {
+        if (currentActiveRate <= 0) {
+          alert('Espera a que cargue la tasa antes de abrir la calculadora flotante.');
+          return;
+        }
+
+        const pipWindow = await documentPictureInPicture.requestWindow({
+          width: 280,
+          height: 230,
+        });
+
+        const style = pipWindow.document.createElement('style');
+        style.textContent = `
+          body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: #1e293b;
+            color: #f8fafc;
+            margin: 0;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            user-select: none;
+          }
+          .box {
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #334155;
+          }
+          .txt-usd { font-size: 13px; color: #94a3b8; margin: 0; }
+          .txt-bs { font-size: 20px; font-weight: bold; color: #4ade80; margin: 4px 0 0 0; }
+          input[type=range] { width: 100%; margin: 8px 0; accent-color: #38bdf8; cursor: pointer; }
+          .btn-group { display: flex; gap: 4px; justify-content: space-between; }
+          .btn-step {
+            flex: 1;
+            padding: 6px 0;
+            background: #334155;
+            color: #fff;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+          }
+          .btn-step:active { background: #475569; }
+        `;
+        pipWindow.document.head.appendChild(style);
+
+        pipWindow.document.body.innerHTML = `
+          <div class="box">
+            <p class="txt-usd">USD: <span id="pipUsd">10.00</span> $</p>
+            <p class="txt-bs"><span id="pipBs">${(10 * currentActiveRate).toFixed(2)}</span> Bs.</p>
+          </div>
+          <input type="range" id="pipSlider" min="0" max="100" step="0.5" value="10">
+          <div class="btn-group">
+            <button class="btn-step" id="btnAdd05">+0.5</button>
+            <button class="btn-step" id="btnAdd1">+1</button>
+            <button class="btn-step" id="btnAdd5">+5</button>
+            <button class="btn-step" id="btnAdd10">+10</button>
+            <button class="btn-step" id="btnReset" style="background:#7f1d1d;">C</button>
+          </div>
+        `;
+
+        let montoUSD = 10.00;
+        const txtUsd = pipWindow.document.getElementById('pipUsd');
+        const txtBs = pipWindow.document.getElementById('pipBs');
+        const slider = pipWindow.document.getElementById('pipSlider');
+
+        function actualizarPip(val) {
+          montoUSD = Math.max(0, parseFloat(val) || 0);
+          slider.value = montoUSD;
+          txtUsd.innerText = montoUSD.toFixed(2);
+          txtBs.innerText = (montoUSD * currentActiveRate).toFixed(2);
+        }
+
+        slider.addEventListener('input', (e) => actualizarPip(e.target.value));
+        pipWindow.document.getElementById('btnAdd05').addEventListener('click', () => actualizarPip(montoUSD + 0.5));
+        pipWindow.document.getElementById('btnAdd1').addEventListener('click', () => actualizarPip(montoUSD + 1));
+        pipWindow.document.getElementById('btnAdd5').addEventListener('click', () => actualizarPip(montoUSD + 5));
+        pipWindow.document.getElementById('btnAdd10').addEventListener('click', () => actualizarPip(montoUSD + 10));
+        pipWindow.document.getElementById('btnReset').addEventListener('click', () => actualizarPip(0));
+
+      } else {
+        alert('Tu navegador no soporta la ventana flotante (Document PiP). Prueba usando Google Chrome actualizado.');
+      }
+    });
+
+    // ==========================================
+    // 2. TRUCO DE NOTIFICACIÓN MULTIMEDIA (Media Session)
+    // ==========================================
+    let notifMontoUSD = 10.00;
+
+    function actualizarMediaSession() {
+      if (currentActiveRate <= 0) return;
+      const totalBs = (notifMontoUSD * currentActiveRate).toFixed(2);
+
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: `${notifMontoUSD.toFixed(2)} USD`,
+          artist: `Equivale a: ${totalBs} Bs.`,
+          album: 'Calculadora Pago Móvil'
+        });
+
+        if ('setPositionState' in navigator.mediaSession) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: 100,
+              playbackRate: 1,
+              position: Math.min(notifMontoUSD, 100)
+            });
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+    }
+
+    btnNotif.addEventListener('click', async () => {
+      if (currentActiveRate <= 0) {
+        alert('Espera a que cargue la tasa antes de activar el modo notificación.');
+        return;
+      }
+
+      try {
+        await audioSilencioso.play();
+
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          if (notifMontoUSD < 100) notifMontoUSD += 1;
+          actualizarMediaSession();
+        });
+
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          if (notifMontoUSD > 0) notifMontoUSD -= 1;
+          actualizarMediaSession();
+        });
+
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if (details.seekTime !== undefined) {
+            notifMontoUSD = details.seekTime;
+            actualizarMediaSession();
+          }
+        });
+
+        navigator.mediaSession.setActionHandler('play', () => {});
+        navigator.mediaSession.setActionHandler('pause', () => {});
+
+        actualizarMediaSession();
+        alert('¡Modo notificación activado! Baja la barra de notificaciones de tu teléfono para ver la conversión y usar los botones de salto.');
+      } catch (err) {
+        console.error("Error al reproducir audio silencioso:", err);
+        alert('No se pudo iniciar el modo notificación. Asegúrate de otorgar permisos de reproducción.');
+      }
+    });
 
     // Registro del Service Worker
     if ('serviceWorker' in navigator) {
