@@ -191,6 +191,45 @@
       border-color: var(--accent-color);
     }
 
+    /* Estilos para la sección de Montos Frecuentes */
+    .frequent-section {
+      margin-bottom: 18px;
+    }
+
+    .frequent-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .frequent-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .frequent-chip {
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 4px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .frequent-chip:active {
+      background-color: var(--accent-color);
+      color: #0f172a;
+      border-color: var(--accent-color);
+    }
+
     .action-row {
       display: flex;
       gap: 8px;
@@ -296,9 +335,24 @@
         <input type="number" id="vesInput" placeholder="0.00" step="any" inputmode="decimal">
       </div>
 
+      <!-- Sección de Montos Frecuentes -->
+      <div class="frequent-section">
+        <div class="frequent-title">Copiar Monto Frecuente</div>
+        <div class="frequent-grid">
+          <button type="button" class="frequent-chip" onclick="copiarMontoFrecuente(1)">$1</button>
+          <button type="button" class="frequent-chip" onclick="copiarMontoFrecuente(2)">$2</button>
+          <button type="button" class="frequent-chip" onclick="copiarMontoFrecuente(3)">$3</button>
+          <button type="button" class="frequent-chip" onclick="copiarMontoFrecuente(5)">$5</button>
+          <button type="button" class="frequent-chip" onclick="copiarMontoFrecuente(10)">$10</button>
+          <button type="button" class="frequent-chip" onclick="copiarMontoFrecuente(20)">$20</button>
+          <button type="button" class="frequent-chip" onclick="copiarMontoFrecuente(50)">$50</button>
+          <button type="button" class="frequent-chip" onclick="copiarMontoFrecuente(100)">$100</button>
+        </div>
+      </div>
+
       <div class="action-row">
-        <button type="button" id="btnRefresh" class="refresh-btn">🔄</button>
-        <button type="button" id="btnCopy" class="copy-btn">📋</button>
+        <button type="button" id="btnRefresh" class="refresh-btn">🔄 Actualizar</button>
+        <button type="button" id="btnCopy" class="copy-btn">📋 Copiar Bs.</button>
       </div>
 
       <!-- Botón para activar el Modo Notificación Inteligente -->
@@ -333,7 +387,6 @@
     const historyDateGroup = document.getElementById('historyDateGroup');
     const historyDateInput = document.getElementById('historyDateInput');
 
-    // Audio silencioso para mantener activa la notificación multimedia
     const audioSilencioso = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
     audioSilencioso.loop = true;
 
@@ -349,7 +402,6 @@
           const fechaGuardada = new Date(cachedTime);
           dateAppliedDisplay.textContent = `Actualizado: ${fechaGuardada.toLocaleString('es-VE')}`;
           
-          // Alerta si la tasa tiene más de 24 horas
           const horasDiferencia = (new Date() - fechaGuardada) / (1000 * 60 * 60);
           if (horasDiferencia > 24) {
             statusBadge.textContent = "Tasa desactualizada (>24h)";
@@ -496,11 +548,29 @@
       }
     }
 
+    // Función para procesar y copiar montos frecuentes con un solo clic
+    function copiarMontoFrecuente(montoUSD) {
+      if (currentActiveRate <= 0) {
+        alert('Espera a que cargue la tasa antes de calcular.');
+        return;
+      }
+      usdInput.value = montoUSD;
+      recalcularLive('usd');
+      const totalBs = vesInput.value;
+      
+      if (totalBs) {
+        navigator.clipboard.writeText(totalBs).then(() => {
+          if ('vibrate' in navigator) navigator.vibrate(50);
+          btnCopy.textContent = `¡${montoUSD}$ Copiado (${totalBs} Bs)! ✓`;
+          setTimeout(() => btnCopy.textContent = "📋 Copiar Bs.", 2500);
+        });
+      }
+    }
+
     usdInput.addEventListener('input', () => recalcularLive('usd'));
     vesInput.addEventListener('input', () => recalcularLive('ves'));
     btnRefresh.addEventListener('click', obtenerTasaD1);
 
-    // Botón Copiar Monto en Bolívares
     btnCopy.addEventListener('click', () => {
       const val = vesInput.value;
       if (!val) {
@@ -530,7 +600,6 @@
       let maxDuration = 100;
 
       if (cicloModo === 0) {
-        // Modo 1: Dólares ➔ Bolívares
         imagenLogo = "mitasa.png";
         maxDuration = 100;
         const totalBs = (montoValor * currentActiveRate).toFixed(2);
@@ -539,7 +608,6 @@
         album = 'Modo: Dólares ➔ Bolívares';
       } 
       else if (cicloModo === 1) {
-        // Modo 2: Bolívares Pequeños
         imagenLogo = "bs_dol_peq.png";
         maxDuration = 20000;
         const totalUSD = (montoValor / currentActiveRate).toFixed(2);
@@ -548,7 +616,6 @@
         album = 'Modo: Bolívares (Pequeños)';
       } 
       else if (cicloModo === 2) {
-        // Modo 3: Bolívares Grandes
         imagenLogo = "bs_dol_g.png";
         maxDuration = 200000;
         const totalUSD = (montoValor / currentActiveRate).toFixed(2);
@@ -557,7 +624,6 @@
         album = 'Modo: Bolívares (Grandes)';
       } 
       else if (cicloModo === 3) {
-        // Modo 4: Euro ➔ Bolívares (Asumiendo referencia o misma tasa / ajustas si tienes tasa EUR separada)
         imagenLogo = "euro.png";
         maxDuration = 100;
         const totalBs = (montoValor * currentActiveRate).toFixed(2);
@@ -573,9 +639,9 @@
           album: album,
           artwork: [
             { src: imagenLogo, sizes: '64x64', type: 'image/png' },
-            { src: imagenLogo, sizes: '64x64', type: 'image/png' },
-            { src: imagenLogo, sizes: '64x64', type: 'image/png' },
-            { src: imagenLogo, sizes: '64x64', type: 'image/png' }
+            { src: imagenLogo, sizes: '128x128', type: 'image/png' },
+            { src: imagenLogo, sizes: '192x192', type: 'image/png' },
+            { src: imagenLogo, sizes: '512x512', type: 'image/png' }
           ]
         });
 
@@ -583,7 +649,7 @@
           try {
             navigator.mediaSession.setPositionState({
               duration: maxDuration,
-              playbackRate: 0, // Barra estática
+              playbackRate: 0,
               position: Math.min(montoValor, maxDuration)
             });
           } catch (e) {
@@ -602,16 +668,14 @@
       try {
         await audioSilencioso.play();
 
-        // Botón Siguiente: Aumenta según el modo activo
         navigator.mediaSession.setActionHandler('nexttrack', () => {
-          if (cicloModo === 0) montoValor += 1.0;       // +1 USD
-          else if (cicloModo === 1) montoValor += 1000;  // +100 Bs
-          else if (cicloModo === 2) montoValor += 5000; // +1000 Bs
-          else if (cicloModo === 3) montoValor += 1.0;  // +1 EUR
+          if (cicloModo === 0) montoValor += 1.0;
+          else if (cicloModo === 1) montoValor += 1000;
+          else if (cicloModo === 2) montoValor += 5000;
+          else if (cicloModo === 3) montoValor += 1.0;
           actualizarMediaSessionInteligente();
         });
 
-        // Botón Anterior: Disminuye según el modo activo
         navigator.mediaSession.setActionHandler('previoustrack', () => {
           if (cicloModo === 0) montoValor = Math.max(0, montoValor - 0.5);
           else if (cicloModo === 1) montoValor = Math.max(0, montoValor - 500);
@@ -620,20 +684,18 @@
           actualizarMediaSessionInteligente();
         });
 
-        // Botón Play / Pause: Rota al siguiente ciclo y asigna valor por defecto
         const rotarCiclo = () => {
           cicloModo = (cicloModo + 1) % 4;
-          if (cicloModo === 0) montoValor = 10.00;      // Default USD
-          else if (cicloModo === 1) montoValor = 1000.00;  // Default Bs Peq
-          else if (cicloModo === 2) montoValor = 10000.00; // Default Bs Gde
-          else if (cicloModo === 3) montoValor = 10.00;   // Default EUR
+          if (cicloModo === 0) montoValor = 10.00;
+          else if (cicloModo === 1) montoValor = 1000.00;
+          else if (cicloModo === 2) montoValor = 10000.00;
+          else if (cicloModo === 3) montoValor = 10.00;
           actualizarMediaSessionInteligente();
         };
 
         navigator.mediaSession.setActionHandler('play', rotarCiclo);
         navigator.mediaSession.setActionHandler('pause', rotarCiclo);
 
-        // Barra deslizante estática
         navigator.mediaSession.setActionHandler('seekto', (details) => {
           if (details.seekTime !== undefined) {
             montoValor = details.seekTime;
@@ -649,7 +711,6 @@
       }
     });
 
-    // Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -658,4 +719,5 @@
     }
   </script>
 </body>
+</html>
 </html>
