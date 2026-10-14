@@ -438,6 +438,8 @@
             localStorage.setItem('bcv_time_d1', ahoraIso);
             
             recalcularLive('usd');
+            // Recargamos el histórico en segundo plano para capturar la nueva fila creada
+            cargarHistoricoAsincrono();
           } else {
             rateDisplay.textContent = "Error";
             dateAppliedDisplay.textContent = "El valor en D1 no es válido";
@@ -548,7 +550,6 @@
       }
     }
 
-    // Función para procesar y copiar montos frecuentes con un solo clic
     function copiarMontoFrecuente(montoUSD) {
       if (currentActiveRate <= 0) {
         alert('Espera a que cargue la tasa antes de calcular.');
@@ -584,15 +585,12 @@
       });
     });
 
-    // ==========================================
-    // MODO NOTIFICACIÓN MULTICICLO CON CAMBIO DE IMAGEN
-    // ==========================================
-    let cicloModo = 0; // 0: USD, 1: Bs. Pequeños, 2: Bs. Grandes, 3: EUR
+    let cicloModo = 0;
     let montoValor = 10.00;
 
     function crearAudioSilenciosoLargo() {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const buffer = ctx.createBuffer(1, ctx.sampleRate * 3600, ctx.sampleRate); // 1 hora de silencio
+      const buffer = ctx.createBuffer(1, ctx.sampleRate * 3600, ctx.sampleRate);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
@@ -609,7 +607,7 @@
 
     let audioSilencioso = null;
 
-   function actualizarMediaSessionInteligente() {
+    function actualizarMediaSessionInteligente() {
       if (currentActiveRate <= 0) return;
 
       let title = "";
@@ -620,7 +618,7 @@
 
       if (cicloModo === 0) {
         imagenLogo = "mitasa.png";
-        maxDuration = 100; // Máximo $100 en la barra
+        maxDuration = 100;
         const totalBs = (montoValor * currentActiveRate).toFixed(2);
         title = `💵 ${montoValor.toFixed(2)} USD`;
         artist = `Equivale a: ${totalBs} Bs.`;
@@ -628,7 +626,7 @@
       } 
       else if (cicloModo === 1) {
         imagenLogo = "bs_dol_peq.png";
-        maxDuration = 20000; // Máximo 20.000 Bs
+        maxDuration = 20000;
         const totalUSD = (montoValor / currentActiveRate).toFixed(2);
         title = `🇻🇪 ${montoValor.toFixed(2)} Bs. (Peq)`;
         artist = `Equivale a: $${totalUSD} USD`;
@@ -636,7 +634,7 @@
       } 
       else if (cicloModo === 2) {
         imagenLogo = "bs_dol_g.png";
-        maxDuration = 200000; // Máximo 200.000 Bs
+        maxDuration = 200000;
         const totalUSD = (montoValor / currentActiveRate).toFixed(2);
         title = `🇻🇪 ${montoValor.toLocaleString()} Bs. (Grandes)`;
         artist = `Equivale a: $${totalUSD} USD`;
@@ -644,7 +642,7 @@
       } 
       else if (cicloModo === 3) {
         imagenLogo = "euro.png";
-        maxDuration = 100; // Máximo 100€
+        maxDuration = 100;
         const totalBs = (montoValor * currentActiveRate).toFixed(2);
         title = `💶 ${montoValor.toFixed(2)} EUR`;
         artist = `Equivale a: ${totalBs} Bs.`;
@@ -664,12 +662,11 @@
           ]
         });
 
-        // Habilitar estado de posición con playbackRate activo
         if ('setPositionState' in navigator.mediaSession) {
           try {
             navigator.mediaSession.setPositionState({
               duration: maxDuration,
-              playbackRate: 1.0, // Indicar que está activo para que el OS dibuje el slider
+              playbackRate: 1.0,
               position: Math.min(Math.max(0, montoValor), maxDuration)
             });
           } catch (e) {
@@ -719,7 +716,6 @@
         navigator.mediaSession.setActionHandler('play', rotarCiclo);
         navigator.mediaSession.setActionHandler('pause', rotarCiclo);
 
-        // Capturar cuando el usuario desliza la barra
         navigator.mediaSession.setActionHandler('seekto', (details) => {
           if (details.seekTime !== undefined) {
             montoValor = details.seekTime;
@@ -743,5 +739,4 @@
     }
   </script>
 </body>
-</html>
 </html>
