@@ -346,21 +346,20 @@
 
       <div class="action-row">
         <button type="button" id="btnRefresh" class="refresh-btn">🔄 Actualizar</button>
-        <button type="button" id="btnCopy" class="copy-btn">📋 Copiar Bs.</button>
+        <button type="button" id="btnCopy" class="copy-btn">📋 Copiar.</button>
       </div>
 
-      <button type="button" id="btnNotif" class="tool-btn">Activar Notificación Inteligente</button>
+      <button type="button" id="btnNotif" class="tool-btn">Calc </button>
     </main>
 
     <div class="status" id="footerStatus">Conectado a Google Sheets</div>
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyAJVchlr4MGep_HS8E6qfKhjAfjnxvQRbGzwqFi0o88VhN_bCoJgqzXcSClKNmRDBC/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxpymZ3l3NWuJ-xAGAFwd-mYeAdFhiT1Loxzpk1Q-VtvFogsXCqA-Oc0I_Jgw2no2eb/exec";
 
     let currentActiveRate = 0;
     let todayRate = 0;
-    let historicoData = [];
     let currentMode = "today";
 
     const usdInput = document.getElementById('usdInput');
@@ -380,7 +379,7 @@
     const historyDateGroup = document.getElementById('historyDateGroup');
     const historyDateInput = document.getElementById('historyDateInput');
 
-    let audioSilencioso = null; // ✅ Corregido
+    let audioSilencioso = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       const cachedRate = localStorage.getItem('bcv_rate_d1');
@@ -388,6 +387,7 @@
 
       if (cachedRate) {
         currentActiveRate = parseFloat(cachedRate);
+        todayRate = currentActiveRate;
         rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
         
         if (cachedTime) {
@@ -416,18 +416,21 @@
 
         if (data && data.tasa) {
           let rawValue = data.tasa.toString().replace(',', '.');
-          currentActiveRate = parseFloat(rawValue);
+          let parsedRate = parseFloat(rawValue);
 
-          if (!isNaN(currentActiveRate)) {
-            rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
-            const ahoraIso = new Date().toISOString();
-            dateAppliedDisplay.textContent = `Actualizado: ${new Date().toLocaleString('es-VE')}`;
+          if (!isNaN(parsedRate)) {
+            todayRate = parsedRate;
+            if (currentMode === "today") {
+              currentActiveRate = parsedRate;
+              rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
+              dateAppliedDisplay.textContent = `Actualizado: ${new Date().toLocaleString('es-VE')}`;
+            }
             
             statusBadge.textContent = "Conectado";
             statusBadge.classList.remove('warning');
 
             localStorage.setItem('bcv_rate_d1', currentActiveRate);
-            localStorage.setItem('bcv_time_d1', ahoraIso);
+            localStorage.setItem('bcv_time_d1', new Date().toISOString());
             
             recalcularLive('usd');
             cargarHistoricoAsincrono();
@@ -454,15 +457,33 @@
       }
     }
 
-    function mostrarTasaHoy() {
-      rateLabel.textContent = "Tasa(Hoy)";
-      const cachedTime = localStorage.getItem('bcv_time_d1');
-      if (currentActiveRate > 0) {
+    tabHoyBtn.addEventListener('click', () => {
+      currentMode = "today";
+      tabHoyBtn.classList.add('active');
+      tabHistorialBtn.classList.remove('active');
+      historyDateGroup.style.display = "none";
+      
+      rateLabel.textContent = "Tasa de Hoy";
+      if (todayRate > 0) {
+        currentActiveRate = todayRate;
         rateDisplay.textContent = `${currentActiveRate.toFixed(2)} Bs.`;
-        dateAppliedDisplay.textContent = cachedTime ? `Actualizado: ${new Date(cachedTime).toLocaleString('es-VE')}` : 'Hoy';
+        dateAppliedDisplay.textContent = `Tasa del día actual`;
       }
       recalcularLive('usd');
-    }
+    });
+
+    tabHistorialBtn.addEventListener('click', () => {
+      currentMode = "history";
+      tabHistorialBtn.classList.add('active');
+      tabHoyBtn.classList.remove('active');
+      historyDateGroup.style.display = "flex";
+
+      if (!historyDateInput.value) {
+        const now = new Date();
+        historyDateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      }
+      buscarTasaPorFecha();
+    });
 
     function buscarTasaPorFecha() {
       const fechaSeleccionada = historyDateInput.value;
@@ -487,27 +508,6 @@
       }
       recalcularLive('usd');
     }
-
-    tabHoyBtn.addEventListener('click', () => {
-      currentMode = "today";
-      tabHoyBtn.classList.add('active');
-      tabHistorialBtn.classList.remove('active');
-      historyDateGroup.style.display = "none";
-      mostrarTasaHoy();
-    });
-
-    tabHistorialBtn.addEventListener('click', () => {
-      currentMode = "history";
-      tabHistorialBtn.classList.add('active');
-      tabHoyBtn.classList.remove('active');
-      historyDateGroup.style.display = "flex";
-
-      if (!historyDateInput.value) {
-        const now = new Date();
-        historyDateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      }
-      buscarTasaPorFecha();
-    });
 
     historyDateInput.addEventListener('change', buscarTasaPorFecha);
 
