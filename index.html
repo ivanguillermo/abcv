@@ -191,7 +191,6 @@
       border-color: var(--accent-color);
     }
 
-    /* Estilos para la sección de Montos Frecuentes */
     .frequent-section {
       margin-bottom: 18px;
     }
@@ -296,14 +295,12 @@
       <span id="statusBadge" class="badge">Conectando...</span>
     </header>
 
-    <!-- Control de Pestañas -->
     <div class="tab-container">
       <button type="button" class="tab-btn active" id="tabHoyBtn">Tasa de Hoy</button>
       <button type="button" class="tab-btn" id="tabHistorialBtn">Consultar Histórico</button>
     </div>
 
     <main class="card">
-      <!-- Selector de Fecha para modo Histórico -->
       <div class="field-group history-selector" id="historyDateGroup" style="display: none;">
         <div class="field-header">
           <label for="historyDateInput">Seleccionar Fecha Pasada</label>
@@ -317,7 +314,6 @@
         <div class="date-applied" id="dateAppliedDisplay">Obteniendo valor...</div>
       </div>
 
-      <!-- Conversión USD -> VES -->
       <div class="field-group">
         <div class="field-header">
           <label for="usdInput">Dólares ($ USD)</label>
@@ -326,7 +322,6 @@
         <input type="number" id="usdInput" placeholder="0.00" step="any" inputmode="decimal">
       </div>
 
-      <!-- Conversión VES -> USD -->
       <div class="field-group">
         <div class="field-header">
           <label for="vesInput">Bolívares (Bs. VES)</label>
@@ -335,7 +330,6 @@
         <input type="number" id="vesInput" placeholder="0.00" step="any" inputmode="decimal">
       </div>
 
-      <!-- Sección de Montos Frecuentes -->
       <div class="frequent-section">
         <div class="frequent-title">Copiar Monto Frecuente</div>
         <div class="frequent-grid">
@@ -355,7 +349,6 @@
         <button type="button" id="btnCopy" class="copy-btn">📋 Copiar Bs.</button>
       </div>
 
-      <!-- Botón para activar el Modo Notificación Inteligente -->
       <button type="button" id="btnNotif" class="tool-btn">Activar Notificación Inteligente</button>
     </main>
 
@@ -387,8 +380,7 @@
     const historyDateGroup = document.getElementById('historyDateGroup');
     const historyDateInput = document.getElementById('historyDateInput');
 
-    let audioSilencioso = null;
-    audioSilencioso.loop = true;
+    let audioSilencioso = null; // ✅ Corregido
 
     document.addEventListener('DOMContentLoaded', () => {
       const cachedRate = localStorage.getItem('bcv_rate_d1');
@@ -438,7 +430,6 @@
             localStorage.setItem('bcv_time_d1', ahoraIso);
             
             recalcularLive('usd');
-            // Recargamos el histórico en segundo plano para capturar la nueva fila creada
             cargarHistoricoAsincrono();
           } else {
             rateDisplay.textContent = "Error";
@@ -604,8 +595,6 @@
       audio.loop = true;
       return audio;
     }
-
-    
 
     function actualizarMediaSessionInteligente() {
       if (currentActiveRate <= 0) return;
