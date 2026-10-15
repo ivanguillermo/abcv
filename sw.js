@@ -1,9 +1,14 @@
-const CACHE_NAME = 'bcv-pwa-v1';
+const CACHE_NAME = 'bcv-pwa-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
+  './app.js',
+  './style.css',
   './manifest.json',
-  './mitasa.png'
+  './mitasa.png',
+  './bs_dol_peq.png',
+  './bs_dol_g.png',
+  './euro.png'  
 ];
 
 // 1. Instalación: Guardar en caché los archivos estáticos
