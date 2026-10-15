@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbz5wKrKzcn2kdK5prJok6z8CXl9CYmC5lq8YCXGgfT2zsNc3Cb37AfVok-Z2_qP1ao/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyPxwzfR3U0uSKex_DJkIuOVrhAekDJk4AWJ5-7_6De7PYH3Xy2y08P0DrCj6-AqFYg/exec";
 
 let currentActiveRate = 0, todayRate = 0, todayRateEuro = 0, currentMode = "today";
 const $ = id => document.getElementById(id);
@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   todayRateEuro = num(localStorage.getItem('bcv_rate_eur')) || 0;
   const t = localStorage.getItem('bcv_time_d1');
   setTab('today');
+  $('footerStatus').textContent = 'Versión 5';
   if (todayRate > 0 && t) {
     const f = new Date(t);
     dateAppliedDisplay.textContent = `Actualizado: ${f.toLocaleString('es-VE')}`;
@@ -181,8 +182,29 @@ const BAJA = [0.5, 500, 1000, 0.5];
 const MAXIMO = [100, 20000, 200000, 100];
 const IMAGEN = ['mitasa.png', 'bs_dol_peq.png', 'bs_dol_g.png', 'euro.png'];
 
-// Síncrona y con buffer de 1 s en loop: no consume memoria y no pierde el gesto del toque
+// 'wav'    = archivo de audio silencioso REAL de duración finita (para que aparezca la barra de tiempo)
+// 'stream' = versión de 1 segundo que ya te mostraba el reproductor (sin barra)
+const MODO_AUDIO = 'wav';
+
+function crearWavSilencioso(segundos) {
+  const rate = 8000, n = rate * segundos;
+  const buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+  const txt = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+  txt(0, 'RIFF'); v.setUint32(4, 36 + n, true); txt(8, 'WAVE'); txt(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate, true);
+  v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  txt(36, 'data'); v.setUint32(40, n, true);
+  new Uint8Array(buf, 44).fill(128); // 128 = silencio en WAV de 8 bits
+  return new Blob([buf], { type: 'audio/wav' });
+}
+
 function crearAudioSilencioso() {
+  if (MODO_AUDIO === 'wav') {
+    const audio = new Audio(URL.createObjectURL(crearWavSilencioso(30)));
+    audio.loop = true;
+    return audio;
+  }
   const ctx = new (window.AudioContext || window.webkitAudioContext)();
   const source = ctx.createBufferSource();
   source.buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
@@ -190,7 +212,6 @@ function crearAudioSilencioso() {
   const dest = ctx.createMediaStreamDestination();
   source.connect(dest);
   source.start();
-  if (ctx.state === 'suspended') ctx.resume();
   const audio = new Audio();
   audio.srcObject = dest.stream;
   audio.loop = true;
@@ -223,14 +244,13 @@ function actualizarMediaSessionInteligente() {
     title, artist, album,
     artwork: ['96x96', '128x128', '192x192', '512x512'].map(sizes => ({ src, sizes, type: 'image/png' }))
   });
-  navigator.mediaSession.playbackState = 'playing';
 
   if ('setPositionState' in navigator.mediaSession) {
     try {
-      navigator.mediaSession.setPositionState({
-        duration: MAXIMO[m], playbackRate: 1.0,
-        position: Math.min(Math.max(0, montoValor), MAXIMO[m])
-      });
+      const estado = { duration: MAXIMO[m], position: Math.min(Math.max(0, montoValor), MAXIMO[m]) };
+      // velocidad casi 0 para que la barra no avance sola
+      try { navigator.mediaSession.setPositionState({ ...estado, playbackRate: 0.0001 }); }
+      catch (_) { navigator.mediaSession.setPositionState({ ...estado, playbackRate: 1.0 }); }
     } catch (e) { console.error("Error al establecer la barra:", e); }
   }
 }
