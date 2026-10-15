@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbyPxwzfR3U0uSKex_DJkIuOVrhAekDJk4AWJ5-7_6De7PYH3Xy2y08P0DrCj6-AqFYg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbz5wKrKzcn2kdK5prJok6z8CXl9CYmC5lq8YCXGgfT2zsNc3Cb37AfVok-Z2_qP1ao/exec";
 
 let currentActiveRate = 0, todayRate = 0, todayRateEuro = 0, currentMode = "today";
 const $ = id => document.getElementById(id);
