@@ -228,7 +228,7 @@ async function crearAudioSilenciosoLargo() {
   if (ctx.state === 'suspended') {
     await ctx.resume();
   }
-  const buffer = ctx.createBuffer(1, ctx.sampleRate * 3600, ctx.sampleRate);
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 6, ctx.sampleRate);
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   source.loop = true;
