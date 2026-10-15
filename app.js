@@ -71,7 +71,7 @@ async function obtenerTasaD1() {
         statusBadge.textContent = "Conectado";
         statusBadge.classList.remove('warning');
 
-        localStorage.setItem('bcv_rate_d1', currentActiveRate);
+        localStorage.setItem('todayRate', currentActiveRate);
         localStorage.setItem('bcv_time_d1', new Date().toISOString());
         
         recalcularLive('usd');
@@ -343,7 +343,7 @@ btnNotif.addEventListener('click', async () => {
     const rotarCiclo = () => {
       cicloModo = (cicloModo + 1) % 4;
       if (cicloModo === 0) montoValor = 10.00;
-      else if (cicnoModo === 1) montoValor = 1000.00;
+      else if (cicloModo === 1) montoValor = 1000.00;
       else if (cicloModo === 2) montoValor = 10000.00;
       else if (cicloModo === 3) montoValor = 10.00;
       actualizarMediaSessionInteligente();
