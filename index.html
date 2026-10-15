@@ -349,14 +349,14 @@
         <button type="button" id="btnCopy" class="copy-btn">📋 Copiar.</button>
       </div>
 
-      <button type="button" id="btnNotif" class="tool-btn">Calc </button>
+      <button type="button" id="btnNotif" class="tool-btn">Calc</button>
     </main>
 
     <div class="status" id="footerStatus">Conectado a Google Sheets</div>
   </div>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyPxwzfR3U0uSKex_DJkIuOVrhAekDJk4AWJ5-7_6De7PYH3Xy2y08P0DrCj6-AqFYg/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbzNpfmpDf3NF3SvI51xNBJwLPVKuVBs4HNN_piTVQ4rcIWDs78X1y0eFSjqwWaG16xU/exec";
 
     let currentActiveRate = 0;
     let todayRate = 0;
@@ -411,7 +411,7 @@
     async function obtenerTasaD1() {
       statusBadge.textContent = "Conectando...";
       try {
-        const response = await fetch(`${API_URL}?action=tasa`);
+        const response = await фич = await fetch(`${API_URL}?action=tasa`);
         const data = await response.json();
 
         if (data && data.tasa) {
@@ -472,7 +472,7 @@
       recalcularLive('usd');
     });
 
-    tabHistorialBtn.addEventListener('click', () => {
+    tabHistorialBtn.addEventListener('click', async () => {
       currentMode = "history";
       tabHistorialBtn.classList.add('active');
       tabHoyBtn.classList.remove('active');
@@ -482,6 +482,9 @@
         const now = new Date();
         historyDateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       }
+      
+      // Forzar carga de histórico al abrir la pestaña por si el caché estaba vacío
+      await cargarHistoricoAsincrono();
       buscarTasaPorFecha();
     });
 
@@ -554,7 +557,7 @@
         navigator.clipboard.writeText(totalBs).then(() => {
           if ('vibrate' in navigator) navigator.vibrate(50);
           btnCopy.textContent = `¡${montoUSD}$ Copiado (${totalBs} Bs)! ✓`;
-          setTimeout(() => btnCopy.textContent = "📋 Copiar Bs.", 2500);
+          setTimeout(() => btnCopy.textContent = "📋 Copiar.", 2500);
         });
       }
     }
@@ -572,15 +575,18 @@
       navigator.clipboard.writeText(val).then(() => {
         if ('vibrate' in navigator) navigator.vibrate(50);
         btnCopy.textContent = "¡Copiado! ✓";
-        setTimeout(() => btnCopy.textContent = "📋 Copiar Bs.", 2000);
+        setTimeout(() => btnCopy.textContent = "📋 Copiar.", 2000);
       });
     });
 
     let cicloModo = 0;
     let montoValor = 10.00;
 
-    function crearAudioSilenciosoLargo() {
+    async function crearAudioSilenciosoLargo() {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') {
+        await ctx.resume(); // Resuelve el bloqueo de audio en móviles
+      }
       const buffer = ctx.createBuffer(1, ctx.sampleRate * 3600, ctx.sampleRate);
       const source = ctx.createBufferSource();
       source.buffer = buffer;
@@ -673,7 +679,7 @@
 
       try {
         if (!audioSilencioso) {
-          audioSilencioso = crearAudioSilenciosoLargo();
+          audioSilencioso = await crearAudioSilenciosoLargo();
         }
         await audioSilencioso.play();
 
