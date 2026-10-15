@@ -25,8 +25,9 @@
     </header>
 
     <div class="tab-container">
-      <button type="button" class="tab-btn active" id="tabHoyBtn">Tasa de Hoy</button>
-      <button type="button" class="tab-btn" id="tabHistorialBtn">Consultar Histórico</button>
+      <button type="button" class="tab-btn active" id="tabHoyBtn">Dólar</button>
+      <button type="button" class="tab-btn" id="tabEuroBtn">Euro</button>
+      <button type="button" class="tab-btn" id="tabHistorialBtn">Histórico</button>
     </div>
 
     <main class="card">
@@ -45,7 +46,7 @@
 
       <div class="field-group">
         <div class="field-header">
-          <label for="usdInput">Dólares ($ USD)</label>
+          <label for="usdInput" id="usdLabel">Dólares ($ USD)</label>
           <span id="usdLivePreview" class="live-preview"></span>
         </div>
         <input type="number" id="usdInput" placeholder="0.00" step="any" inputmode="decimal">
